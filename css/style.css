@@ -120,7 +120,7 @@ button, select { font: inherit; color: inherit; }
   align-items: center;
 }
 .hint { margin: 0 0 4px; color: var(--muted); font-size: .9rem; text-align: center; }
-.headstock { width: 100%; max-width: 380px; user-select: none; }
+.headstock { width: 100%; max-width: 440px; user-select: none; }
 
 .peg { cursor: pointer; }
 .peg .knob {
@@ -139,6 +139,15 @@ button, select { font: inherit; color: inherit; }
 .peg:focus { outline: none; }
 .peg .check { fill: var(--good); font-size: 14px; font-weight: 700; pointer-events: none; opacity: 0; }
 .peg.tuned .check { opacity: 1; }
+
+.listen-btn { cursor: pointer; }
+.listen-btn:focus { outline: none; }
+.listen-btn circle { fill: var(--panel-2); stroke: var(--muted); stroke-width: 2; transition: fill .2s, stroke .2s; }
+.listen-btn:hover circle, .listen-btn:focus circle { stroke: var(--accent); }
+.listen-btn.on circle { fill: var(--accent); stroke: var(--accent); }
+.listen-icon { font-size: 18px; pointer-events: none; }
+.listen-text { fill: var(--muted); font-size: 11px; font-weight: 600; pointer-events: none; }
+.listen-btn.on .listen-text { fill: var(--accent); }
 
 .string-line { stroke: #d8dce2; stroke-linecap: round; }
 .string-line.active { stroke: var(--accent); }

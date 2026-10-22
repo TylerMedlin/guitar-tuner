@@ -184,10 +184,21 @@
       el('text', { x: kx, y: p.y - 38, 'text-anchor': 'middle', class: 'string-num' }, g).textContent = `String ${6 - i}`;
       el('text', { x: kx + p.side * -24, y: p.y - 22, 'text-anchor': 'middle', class: 'check' }, g).textContent = '✓';
 
-      const tap = () => tapPeg(i);
-      g.addEventListener('click', tap);
-      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); } });
-      pegEls.push({ g, label, oct });
+      const open = () => openSheet(i);
+      g.addEventListener('click', open);
+      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+
+      // Separate "listen" button beside the knob: tune only this string
+      const bx = kx + p.side * 54;
+      const lb = el('g', { class: 'listen-btn', tabindex: 0, role: 'button' }, headstock);
+      el('circle', { cx: bx, cy: p.y, r: 20 }, lb);
+      el('text', { x: bx, y: p.y + 6, 'text-anchor': 'middle', class: 'listen-icon' }, lb).textContent = '🎯';
+      el('text', { x: bx, y: p.y + 34, 'text-anchor': 'middle', class: 'listen-text' }, lb).textContent = 'Tune';
+      const listen = () => toggleListen(i);
+      lb.addEventListener('click', listen);
+      lb.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); listen(); } });
+
+      pegEls.push({ g, label, oct, lb });
     });
   }
 
@@ -196,10 +207,13 @@
       const m = state.notes[i];
       p.label.textContent = Notes.name(m);
       p.oct.textContent = Notes.octave(m);
-      const selectedLocked = state.locked && i === state.selected;
-      p.g.setAttribute('aria-label', selectedLocked
-        ? `String ${6 - i}, ${Notes.label(m)}. Listening to this string. Tap again to change its note.`
-        : `String ${6 - i}, ${Notes.label(m)}. Tap to listen to this string.`);
+      const listening = state.locked && i === state.selected;
+      p.g.setAttribute('aria-label', `String ${6 - i}, ${Notes.label(m)}. Tap to change its note.`);
+      p.lb.setAttribute('aria-label', listening
+        ? `Listening to string ${6 - i}. Tap to go back to auto detect.`
+        : `Tune string ${6 - i} only`);
+      p.lb.setAttribute('aria-pressed', listening);
+      p.lb.classList.toggle('on', listening);
       p.g.classList.toggle('active', i === state.selected);
       p.g.classList.toggle('tuned', state.tuned[i]);
       stringEls[i].querySelectorAll('line').forEach((l) => {
@@ -224,18 +238,10 @@
     noteGrid.appendChild(b);
   });
 
-  // First tap: listen only to this string. Tap the same knob again: change its note.
-  function tapPeg(i) {
-    if (state.locked && state.selected === i) {
-      openSheet(i);
-      return;
-    }
-    selectString(i);
-  }
-
-  function selectString(i) {
-    state.selected = i;
-    state.locked = true;
+  // Listen button: lock onto this string, or tap again to go back to auto.
+  function toggleListen(i) {
+    if (state.locked && state.selected === i) state.locked = false;
+    else { state.selected = i; state.locked = true; }
     inTuneSince = 0;
     history = [];
     renderAll();
@@ -243,8 +249,6 @@
 
   function openSheet(i) {
     state.editing = i;
-    state.selected = i;
-    state.locked = true;
     sheet.hidden = false;
     renderSheet();
     renderAll();
@@ -348,12 +352,11 @@
     const m = state.notes[state.selected];
     $('targetNote').innerHTML = `${Notes.name(m)}<small>${Notes.octave(m)}</small>`;
     const chip = $('modeChip');
-    chip.textContent = state.locked ? `🎯 String ${6 - state.selected} only · tap for Auto` : 'Auto detect · tap a knob to pick a string';
+    chip.textContent = state.locked ? `🎯 String ${6 - state.selected} only · tap for Auto` : 'Auto detect · tap 🎯 to pick a string';
     chip.classList.toggle('locked', state.locked);
     $('listenLabel').textContent = state.locked
       ? `Listening to String ${6 - state.selected} (${Notes.label(m)})`
       : 'Listening to any string';
-    $('editNote').textContent = `✏️ Change String ${6 - state.selected} note`;
   }
 
   $('modeChip').addEventListener('click', () => {
@@ -362,7 +365,6 @@
     history = [];
     renderAll();
   });
-  $('editNote').addEventListener('click', () => openSheet(state.selected));
 
   function renderAll() {
     renderSelect();
