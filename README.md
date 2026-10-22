@@ -7,7 +7,7 @@ A mobile-friendly guitar tuner that runs in the browser. No install or build ste
 - **Preset tunings** – Standard, Drop D, Eb, D standard, Drop C, DADGAD, Open G/D/E/C.
 - **Custom tunings** – change any string, then "Save as custom tuning". Saved in your browser.
 - **Microphone tuner** – listens to your guitar, shows a needle and how many cents sharp/flat you are, tells you to tune up or down, and shows "✓ In tune!" (with a vibration on phones) once you're within ±5 cents.
-- **Auto detect** picks the closest string automatically; tapping a knob locks the tuner to that string. Tap the chip to switch back to auto.
+- **Tap a knob** to have the tuner listen only to that string (it tells you if you're plucking a different one). Tap the same knob again, or "Change note", to change its note. Tap the orange chip to go back to auto detect.
 
 ## Run it
 The microphone only works over `https://` or `localhost`.

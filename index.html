@@ -38,6 +38,7 @@
         </g>
       </svg>
 
+      <div id="listenLabel" class="listen-label">Listening to any string</div>
       <div class="target">
         <div id="targetNote" class="target-note">E<small>2</small></div>
         <div id="centsText" class="cents">&nbsp;</div>
@@ -49,9 +50,10 @@
 
     <!-- Headstock with tappable tuning knobs -->
     <section class="headstock-wrap">
-      <p class="hint">Tap a tuning knob to change that string’s note</p>
+      <p class="hint">Tap a knob to tune just that string.<br>Tap it again to change its note.</p>
       <svg id="headstock" viewBox="0 0 320 380" class="headstock" role="group" aria-label="Guitar headstock"></svg>
       <div class="actions">
+        <button id="editNote" type="button" class="ghost">✏️ Change note</button>
         <button id="saveTuning" type="button" class="ghost">Save as custom tuning</button>
         <button id="deleteTuning" type="button" class="ghost danger" hidden>Delete custom tuning</button>
       </div>

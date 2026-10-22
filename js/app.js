@@ -184,9 +184,9 @@
       el('text', { x: kx, y: p.y - 38, 'text-anchor': 'middle', class: 'string-num' }, g).textContent = `String ${6 - i}`;
       el('text', { x: kx + p.side * -24, y: p.y - 22, 'text-anchor': 'middle', class: 'check' }, g).textContent = '✓';
 
-      const open = () => openSheet(i);
-      g.addEventListener('click', open);
-      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      const tap = () => tapPeg(i);
+      g.addEventListener('click', tap);
+      g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(); } });
       pegEls.push({ g, label, oct });
     });
   }
@@ -196,7 +196,10 @@
       const m = state.notes[i];
       p.label.textContent = Notes.name(m);
       p.oct.textContent = Notes.octave(m);
-      p.g.setAttribute('aria-label', `String ${6 - i}, tuned to ${Notes.label(m)}. Tap to change.`);
+      const selectedLocked = state.locked && i === state.selected;
+      p.g.setAttribute('aria-label', selectedLocked
+        ? `String ${6 - i}, ${Notes.label(m)}. Listening to this string. Tap again to change its note.`
+        : `String ${6 - i}, ${Notes.label(m)}. Tap to listen to this string.`);
       p.g.classList.toggle('active', i === state.selected);
       p.g.classList.toggle('tuned', state.tuned[i]);
       stringEls[i].querySelectorAll('line').forEach((l) => {
@@ -220,6 +223,23 @@
     });
     noteGrid.appendChild(b);
   });
+
+  // First tap: listen only to this string. Tap the same knob again: change its note.
+  function tapPeg(i) {
+    if (state.locked && state.selected === i) {
+      openSheet(i);
+      return;
+    }
+    selectString(i);
+  }
+
+  function selectString(i) {
+    state.selected = i;
+    state.locked = true;
+    inTuneSince = 0;
+    history = [];
+    renderAll();
+  }
 
   function openSheet(i) {
     state.editing = i;
@@ -328,14 +348,21 @@
     const m = state.notes[state.selected];
     $('targetNote').innerHTML = `${Notes.name(m)}<small>${Notes.octave(m)}</small>`;
     const chip = $('modeChip');
-    chip.textContent = state.locked ? `🔒 String ${6 - state.selected} only` : 'Auto detect';
+    chip.textContent = state.locked ? `🎯 String ${6 - state.selected} only · tap for Auto` : 'Auto detect · tap a knob to pick a string';
     chip.classList.toggle('locked', state.locked);
+    $('listenLabel').textContent = state.locked
+      ? `Listening to String ${6 - state.selected} (${Notes.label(m)})`
+      : 'Listening to any string';
+    $('editNote').textContent = `✏️ Change String ${6 - state.selected} note`;
   }
 
   $('modeChip').addEventListener('click', () => {
     state.locked = !state.locked;
+    inTuneSince = 0;
+    history = [];
     renderAll();
   });
+  $('editNote').addEventListener('click', () => openSheet(state.selected));
 
   function renderAll() {
     renderSelect();
@@ -396,14 +423,28 @@
     return s[Math.floor(s.length / 2)];
   }
 
-  function closestString(freq) {
+  function closestString(freq, current) {
     const midi = Notes.freqToMidi(freq);
     let best = 0, bestDist = Infinity;
     state.notes.forEach((m, i) => {
       const d = Math.abs(midi - m);
       if (d < bestDist) { bestDist = d; best = i; }
     });
+    // Stay on the current string unless another one is clearly closer
+    if (current != null && best !== current && Math.abs(midi - state.notes[current]) - bestDist < 0.5) return current;
     return best;
+  }
+
+  // In locked mode, spot when a different string is being played.
+  function otherStringPlayed(freq, i) {
+    if (Math.abs(Notes.centsOff(freq, state.notes[i])) < 250) return -1;
+    let found = -1, bestAbs = 60;
+    state.notes.forEach((m, j) => {
+      if (j === i) return;
+      const a = Math.abs(Notes.centsOff(freq, m));
+      if (a < bestAbs) { bestAbs = a; found = j; }
+    });
+    return found;
   }
 
   function setIdle(msg) {
@@ -443,7 +484,7 @@
 
   function handlePitch(freq, now) {
     if (!state.locked) {
-      const idx = closestString(freq);
+      const idx = closestString(freq, state.selected);
       if (idx !== state.selected) {
         state.selected = idx;
         inTuneSince = 0;
@@ -464,6 +505,17 @@
     let centsLine = `${sign}${Math.abs(rounded)} cents`;
     if (heard !== target) centsLine += ` · hearing ${Notes.label(heard)}`;
     $('centsText').textContent = centsLine;
+
+    if (state.locked) {
+      const other = otherStringPlayed(freq, i);
+      if (other >= 0) {
+        inTuneSince = 0;
+        meterEl.classList.remove('in-tune');
+        setNeedle(0, 'idle');
+        setStatus(`That sounds like String ${6 - other} — pluck String ${6 - i} (${Notes.label(target)})`, 'close');
+        return;
+      }
+    }
 
     if (abs <= IN_TUNE_CENTS) {
       setNeedle(cents, 'good');
